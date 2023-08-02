@@ -3,5 +3,5 @@ Tool for frame blending and upscaling videos.
 
 ## Usage/Examples
 
-Updating...
+[Youtube](https://youtu.be/l9EKxQrZNwk)
 
