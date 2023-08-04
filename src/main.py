@@ -1,24 +1,30 @@
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, IntVar
 import tkinter as tk
 import sv_ttk
 import os, subprocess, shutil, shlex, threading, time
 from subprocess import CREATE_NO_WINDOW
 
+def copy_to_process():
+  global path, destination_path
+  path = get_entry_value(inputTextBox)
+  destination_path = "video.mp4"
+  shutil.copyfile(path, destination_path)
 
 def startResamplingProcess():
   
   #PrepareValue
   resamplingStartButton.config(state='disable')
+  fpsAmountTextBox.config(state='disable')
+  crfValueTextBox.config(state='disable')
+
   time.sleep(1)
+
   fpsAmount = get_entry_value(fpsAmountTextBox)
   os.environ["fpsAmount"] = fpsAmount
 
-  path = get_entry_value(inputTextBox)
-  destination_path = "video.mp4"
-  shutil.copyfile(path, destination_path)
-  #filename = os.path.basename(path)
+  copy_to_process()
 
-  os.environ["filename"] = destination_path
+  #os.environ["filename"] = destination_path
 
   fpsAmount = int(fpsAmount)
   framesAmount = (fpsAmount / 60) - 1
@@ -56,7 +62,11 @@ def startResamplingProcess():
     consoleTextBox.delete("1.0", "end")
     consoleTextBox.insert('1.0', 'Stopped')
     consoleTextBox.config(state='disable')
+
     resamplingStartButton.config(state='normal')
+    fpsAmountTextBox.config(state='normal')
+    crfValueTextBox.config(state='normal')
+
     if os.path.exists('out') == False:
       messagebox.showerror('Error', 'Missing "out" dir!')
     else:
@@ -69,7 +79,6 @@ def startResamplingProcess():
   consoleTextBox.insert('1.0', 'Starting...')
   consoleTextBox.config(state='disable')
   
-
 def selectInputFile():
     File = filedialog.askopenfilename(title='Choose a file', filetypes = (("Video file","*.mp4"),("All files","*.*")))
     inputTextBox.configure(state='normal')
@@ -83,22 +92,22 @@ def get_entry_value(entry):
 
 root =tk.Tk()
 root.geometry('500x450')
-root.title('Hello World')
+root.title('BS-GUI')
 sv_ttk.set_theme("dark")
 
 tab_control = ttk.Notebook(root)
-tab1 = ttk.Frame(tab_control)
-tab_control.add(tab1, text='Resampling')
-tab2 = ttk.Frame(tab_control)
-tab_control.add(tab2, text='Cut')
 
 #Input
-resamplingLableFrame = ttk.LabelFrame(tab1, text='Input')
-resamplingLableFrame.pack(fill="both", padx = 10, pady = 10)
-inputTextBox = ttk.Entry(resamplingLableFrame, state='disable')
+inputLableFrame = ttk.LabelFrame(root, text='Input')
+inputLableFrame.pack(fill="both", padx = 10, pady = 10)
+inputTextBox = ttk.Entry(inputLableFrame, state='disable')
 inputTextBox.pack(side= 'left', fill='x', expand='True', padx=10, pady=10)
-browserFile = ttk.Button(resamplingLableFrame, text="Select...", command=selectInputFile)
+browserFile = ttk.Button(inputLableFrame, text="Select...", command=selectInputFile)
 browserFile.pack(side= 'left', fill='x', expand='False', padx=10, pady=10)
+
+#================================Resampling================================#
+tab1 = ttk.Frame(tab_control)
+tab_control.add(tab1, text='Resampling')
 
 #FPS
 resamplingLableFrame_FPS = ttk.LabelFrame(tab1, text='FPS')
@@ -120,16 +129,49 @@ fpsAmountTextBox.config(validate="key", validatecommand=(fpsAmountTextBox.regist
 resamplingStartButton = ttk.Button(tab1, text='Start!', command=startResamplingProcess)
 resamplingStartButton.pack(fill='x', padx=10, pady=10)
 
+
+
+#================================END================================#
+
+
+#================================ReduceFS================================#
+tab2 = ttk.Frame(tab_control)
+tab_control.add(tab2, text='Reduce Size')
+
+#Quality Loss
+
+reduceFSFrame_LossCRF = ttk.LabelFrame(tab2, text='Choose quality loss')
+reduceFSFrame_LossCRF.pack(fill='x', padx=10, pady=5)
+
+lossCRFOption = IntVar()
+
+ttk.Radiobutton(reduceFSFrame_LossCRF, text='Low', variable=lossCRFOption, value=1).pack(side='left', padx=10, pady=10)
+ttk.Radiobutton(reduceFSFrame_LossCRF, text='Medium', variable=lossCRFOption, value=2).pack(side='left', padx=10, pady=10)
+ttk.Radiobutton(reduceFSFrame_LossCRF, text='High', variable=lossCRFOption, value=3).pack(side='left', padx=10, pady=10)
+ttk.Radiobutton(reduceFSFrame_LossCRF, text='Insane', variable=lossCRFOption, value=4).pack(side='left', padx=10, pady=10)
+
+#StartButton
+reduceFSStartButton = ttk.Button(tab2, text='Start!')
+reduceFSStartButton.pack(fill='x', padx=10, pady=10)
+
+
+
+
+
+
+#================================END================================#
+tab_control.pack(fill='both')
+
 #Console
-ConsoleEntry = ttk.LabelFrame(tab1, text='Status')
+ConsoleEntry = ttk.LabelFrame(root, text='Status')
 ConsoleEntry.pack(fill='x', padx=10, pady=5)
 consoleTextBox = tk.Text(ConsoleEntry, state="disabled")
 consoleTextBox.pack(padx=10, pady=10)
 consoleTextBox.config(state='normal')
 consoleTextBox.insert('1.0', 'Stopped')
 consoleTextBox.config(state='disable')
-
-
-
-tab_control.pack(fill='both')
 root.mainloop()
+
+
+#Test
+print(lossCRFOption.get())
