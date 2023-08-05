@@ -10,6 +10,9 @@ def copy_to_process():
   destination_path = "video.mp4"
   shutil.copyfile(path, destination_path)
 
+def get_entry_value(entry):
+  return entry.get()
+
 def startResamplingProcess():
   
   #PrepareValue
@@ -45,8 +48,12 @@ def startResamplingProcess():
 
   #ffmpegProcessing
   def ffmpegResampleProcessing():
+    global process
     command = shlex.split(f'ffmpeg -y -i avsscript.avs -v quiet -stats -i {destination_path} {gpu} -crf {crfValue} -c:a copy out/output-{fpsAmount}fps-resampled.mp4')
-    subprocess.run(command, creationflags=subprocess.CREATE_NO_WINDOW)
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, shell=True)
+
+    get_ffmpeg_process()
+    #subprocess.run(command, creationflags=subprocess.CREATE_NO_WINDOW)
 
     consoleTextBox.config(state='normal')
     consoleTextBox.delete("1.0", "end")
@@ -56,7 +63,7 @@ def startResamplingProcess():
     os.system(f'DEL /F /Q {destination_path}.ffindex')
     os.system('DEL /F /Q avsscript.avs')
     os.system(f'DEL /F /Q {destination_path}')
-    time.sleep(5)
+    time.sleep(3)
 
     consoleTextBox.config(state='normal')
     consoleTextBox.delete("1.0", "end")
@@ -66,14 +73,9 @@ def startResamplingProcess():
     resamplingStartButton.config(state='normal')
     fpsAmountTextBox.config(state='normal')
     crfValueTextBox.config(state='normal')
+    return_status()
 
-    if os.path.exists('out') == False:
-      messagebox.showerror('Error', 'Missing "out" dir!')
-    else:
-      messagebox.showinfo('Complete', 'Complete')
-
-  Resamplingthread = threading.Thread(target=ffmpegResampleProcessing)
-  Resamplingthread.start()
+  threading.Thread(target=ffmpegResampleProcessing).start()
   consoleTextBox.config(state='normal')
   consoleTextBox.delete("1.0", "end")
   consoleTextBox.insert('1.0', 'Starting...')
@@ -86,9 +88,64 @@ def selectInputFile():
     inputTextBox.insert(0, File)
     inputTextBox.configure(state='disabled')
 
-def get_entry_value(entry):
-  return entry.get()
+def startReduceFSProcess():
+  reduceFSStartButton.config(state='disable')
+  if lossCRFOption.get() == 1:#Low
+    lossCRFValue = 10
+  elif lossCRFOption.get() == 2:#Medium
+    lossCRFValue = 13
+  elif lossCRFOption.get() == 3:#High
+    lossCRFValue = 16
+  elif lossCRFOption.get() == 4:#Insane
+    lossCRFValue = 20
+  else:
+    messagebox.showerror('Error', 'Please choose quality loss!')
+    return
+  
+  copy_to_process()
+  def reduceFSProcessing():
+    global process
+    command = shlex.split(f'ffmpeg -v quiet -stats -i {destination_path} -c:v libx264 -crf {lossCRFValue} -preset veryfast -c:a copy out/Output-less-file-size.mp4')
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, universal_newlines=True, shell=True)
+    get_ffmpeg_process()
 
+    consoleTextBox.config(state='normal')
+    consoleTextBox.delete("1.0", "end")
+    consoleTextBox.insert('1.0', 'Clearing tmp file...')
+    consoleTextBox.config(state='disable')
+
+    os.system(f'DEL /F /Q {destination_path}')
+
+    consoleTextBox.config(state='normal')
+    consoleTextBox.delete("1.0", "end")
+    consoleTextBox.insert('1.0', 'Stopped')
+    consoleTextBox.config(state='disable')
+
+    reduceFSStartButton.config(state='normal')
+    return_status()
+
+  threading.Thread(target=reduceFSProcessing).start()
+  consoleTextBox.config(state='normal')
+  consoleTextBox.delete("1.0", "end")
+  consoleTextBox.insert('1.0', 'Starting...')
+  consoleTextBox.config(state='disable')
+
+
+
+def get_ffmpeg_process(): 
+  consoleTextBox.config(state='normal')
+  for line in iter(process.stdout.readline, b''):
+      consoleTextBox.delete("1.0", "end")
+      consoleTextBox.insert('1.0', line.rstrip())
+      if line.rstrip() == '':
+          break
+  consoleTextBox.config(state='disable')
+
+def return_status():
+  if os.path.exists('out') == False:
+    messagebox.showerror('Error', 'Missing "out" dir!')
+  else:
+    messagebox.showinfo('Complete', 'Complete! Save in "out" dir')
 
 root =tk.Tk()
 root.geometry('500x450')
@@ -151,11 +208,8 @@ ttk.Radiobutton(reduceFSFrame_LossCRF, text='High', variable=lossCRFOption, valu
 ttk.Radiobutton(reduceFSFrame_LossCRF, text='Insane', variable=lossCRFOption, value=4).pack(side='left', padx=10, pady=10)
 
 #StartButton
-reduceFSStartButton = ttk.Button(tab2, text='Start!')
-reduceFSStartButton.pack(fill='x', padx=10, pady=10)
-
-
-
+reduceFSStartButton = ttk.Button(tab2, text='Start!', command=startReduceFSProcess)
+reduceFSStartButton.pack(side='bottom', fill='x', padx=10, pady=10)
 
 
 
@@ -174,4 +228,4 @@ root.mainloop()
 
 
 #Test
-print(lossCRFOption.get())
+#print(lossCRFOption.get())
